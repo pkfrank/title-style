@@ -1,21 +1,11 @@
-# Title style
+Tiger titles gives Paseo workspaces short names with a recognizable subject and a specific action, such as “Atlas · Review launch copy”. New workspaces can be named automatically. Existing ones have a preview before applying a suggestion.
 
-Title style generates descriptive workspace titles in Paseo automatically using a configurable LLM prompt. By default, it produces concise Simplified Chinese titles, but the prompt can be customized for any language or naming style.
+Open Tiger titles in the sidebar or type `/titles` in a workspace to preview a name, lock it, undo a change or search prior names. Manual changes observed outside the plugin lock the name. A primary agent owns each workspace title, so subagent activity does not replace the overall task name.
 
-## How it works
+Requires Paseo 0.11.1 or later and a recent Claude Code installation with a working login and Haiku 4.5 access. Tested with Claude Code 2.1.285. Settings controls automatic naming and the naming instructions. Each host has its own installation and state.
 
-When a new workspace is created and its first agent starts, the plugin runs a lightweight background agent to summarize the initial prompt into a clean, task-focused title. The generated title updates the workspace name in the sidebar. The background agent is delegated and archived immediately after completion, running quietly without generating notifications.
+The model receives short user objectives, the project name and the current title. Common secrets, email addresses and URLs are redacted from objectives; tool output and attachments are excluded. Redaction is best effort. Requests use a tool-free Claude Code call with project customizations and session persistence disabled. History is kept locally.
 
-## Configuration
+Haiku 4.5 is pinned with no fallback. Automatic requests are deduplicated and limited to one at a time, a two-minute interval per workspace and 30 requests per hour across the host. Explicit previews share the hourly limit. Reported costs are list-price estimates, not subscription charges.
 
-Open Settings → Plugins → Title style to configure the plugin:
-
-- Prompt: Customize the prompt used to generate titles. You can specify language, format, character limits, or naming conventions.
-- Model override: Leave blank to follow the default metadata generation model in Settings → Host → Metadata, or specify a provider/model identifier (such as codex/gpt-5.4).
-
-## Limits
-
-- Only newly created workspaces are renamed. Existing workspace titles are preserved.
-- Workspaces manually renamed by the user are preserved (except during the initial 60-second creation window while background title generation resolves).
-- The first prompt (up to 600 characters) is sent to the selected model provider to generate the title.
-- Each title generation issues a single LLM request billed according to your configured metadata model.
+This version names workspace/sidebar rows, not individual agent tabs. Changes follow user objectives rather than inferred completion status. Paseo's built-in namer is left enabled; its changes are conservatively preserved as outside edits. Paseo does not offer an atomic conditional rename, so a narrow read/write race remains despite stale-result checks.

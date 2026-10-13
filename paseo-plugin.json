@@ -1,13 +1,9 @@
 {
-  "id": "title-style",
-  "name": "Title style",
-  "description": "Rename Paseo workspaces with a configurable LLM prompt — Chinese titles by default",
+  "id": "tiger-titles",
+  "name": "Tiger titles",
+  "description": "Stable, action-oriented Paseo workspace titles with preview, locks and undo",
   "icon": "assets/icon.png",
-  "media": [
-    "assets/title-style-sidebar.png",
-    "assets/title-style-settings.png"
-  ],
   "requirements": {
-    "paseo": ">=0.8.0"
+    "paseo": ">=0.11.1"
   }
 }

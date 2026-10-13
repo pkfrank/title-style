@@ -1,21 +1,37 @@
 {
-  "name": "title-style",
+  "name": "tiger-titles",
   "private": true,
-  "version": "1.3.0",
-  "description": "Rename Paseo workspaces with a configurable LLM prompt — Chinese titles by default, following the metadata-generation model config",
+  "version": "2.0.0",
+  "description": "Stable, action-oriented Paseo workspace titles with preview, locks and undo",
   "author": "zwmmm",
   "license": "MIT",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test server/*.test.ts",
+    "format": "prettier --write \"{client,server,shared}/**/*.{ts,tsx}\" index.* package.json paseo-plugin.json",
+    "dev:ui": "vite --config dev/vite.config.mjs"
   },
   "devDependencies": {
-    "@getpaseo/plugin": "0.8.0",
+    "@getpaseo/plugin": "0.11.1",
     "@tanstack/react-query": "^5.90.11",
     "@types/node": "^25.0.0",
     "@types/react": "~19.2.0",
+    "@types/react-dom": "^19.2.2",
+    "prettier": "^3.9.10",
     "react": "19.1.0",
+    "react-dom": "^19.1.0",
     "react-native": "0.81.5",
+    "react-native-web": "^0.21.4",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
+    "vite": "^8.3.4",
     "zod": "^4.4.3"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pkfrank/title-style.git"
+  },
+  "contributors": [
+    "Peter Frank"
+  ]
 }

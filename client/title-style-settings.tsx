@@ -1,120 +1,116 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Text, TextInput } from "react-native";
+import { useEffect, useState } from "react";
+import { Text, TextInput, View, Pressable } from "react-native";
 import {
   useSettings,
   type PluginSurfaceProps,
   type SettingsState,
 } from "@getpaseo/plugin/client";
-import {
-  SettingsAction,
-  SettingsCard,
-  SettingsInput,
-  SettingsRow,
-  SettingsSection,
-} from "@getpaseo/plugin/client/ui";
 import { titleStyleSettings } from "../shared/settings";
-import { detectLocale, strings } from "./i18n";
-
-type ReadySettings = Extract<
+type Ready = Extract<
   SettingsState<typeof titleStyleSettings.schema>,
   { status: "ready" }
 >;
-
-const AUTOSAVE_DELAY_MS = 600;
-
 function Editor({
   settings,
   theme,
-  locale,
 }: {
-  settings: ReadySettings;
+  settings: Ready;
   theme: PluginSurfaceProps["theme"];
-  locale: "zh" | "en";
 }) {
-  const t = strings[locale];
-  const [draft, setDraft] = useState(() => settings.values);
-  const changeInstructions = useCallback(
-    (instructions: string) => setDraft((current) => ({ ...current, instructions })),
-    [],
+  const [instructions, setInstructions] = useState(
+    settings.values.instructions,
   );
-  const changeModel = useCallback(
-    (model: string) => setDraft((current) => ({ ...current, model })),
-    [],
-  );
-  const dirty =
-    draft.instructions !== settings.values.instructions ||
-    draft.model !== settings.values.model;
-  // Debounced auto-save; stops on a failed save until the next edit.
+  const [revision, setRevision] = useState(settings.revision);
   useEffect(() => {
-    if (!dirty || settings.saving || settings.saveError) return;
-    const id = setTimeout(() => {
-      void settings.save(
-        { ...settings.values, instructions: draft.instructions, model: draft.model },
-        settings.revision,
-      );
-    }, AUTOSAVE_DELAY_MS);
-    return () => clearTimeout(id);
-  }, [dirty, settings, draft]);
-  const styles = useMemo(
-    () => ({
-      muted: { color: theme.colors.foregroundMuted },
-      input: {
-        color: theme.colors.foreground,
-        backgroundColor: theme.colors.surface1,
-        borderColor: theme.colors.border,
-        borderWidth: 1,
-        borderRadius: 8,
-        padding: 10,
-        minHeight: 96,
-        fontSize: 13,
-        textAlignVertical: "top" as const,
-      },
-    }),
-    [theme],
-  );
+    if (instructions === settings.values.instructions)
+      setRevision(settings.revision);
+  }, [instructions, settings.values.instructions, settings.revision]);
+  const [saved, setSaved] = useState(false);
+  const text = { color: theme.colors.foreground };
+  const button = {
+    backgroundColor: theme.colors.surface2,
+    padding: 12,
+    borderRadius: 8,
+  };
   return (
-    <SettingsSection title={t.promptSection}>
-      <SettingsCard>
-        <SettingsRow label={t.promptLabel} hint={t.promptHint}>
-          <TextInput
-            multiline
-            value={draft.instructions}
-            onChangeText={changeInstructions}
-            editable={!settings.saving}
-            style={styles.input}
-          />
-        </SettingsRow>
-        <SettingsInput
-          label={t.modelLabel}
-          hint={t.modelHint}
-          placeholder={t.modelPlaceholder}
-          initialValue={draft.model}
-          onChangeText={changeModel}
-          disabled={settings.saving}
-        />
-      </SettingsCard>
+    <View style={{ gap: 16 }}>
+      <Text style={text}>
+        Haiku 4.5 through this host’s Claude Code login. No fallback model. One
+        call at a time, at most {settings.values.hourlyLimit}/hour, with a{" "}
+        {settings.values.cooldownSeconds}s interval per workspace.
+      </Text>
+      <Pressable
+        accessibilityRole="switch"
+        accessibilityState={{ checked: settings.values.enabled }}
+        style={button}
+        onPress={() => {
+          void settings.save(
+            { ...settings.values, enabled: !settings.values.enabled },
+            settings.revision,
+          );
+        }}
+      >
+        <Text style={text}>
+          Automatic naming: {settings.values.enabled ? "On" : "Off"}
+        </Text>
+      </Pressable>
+      <Text style={text}>Naming instructions</Text>
+      <TextInput
+        accessibilityLabel="Naming instructions"
+        multiline
+        value={instructions}
+        onChangeText={(value) => {
+          setInstructions(value);
+          setSaved(false);
+        }}
+        style={{
+          ...text,
+          borderColor: theme.colors.border,
+          borderWidth: 1,
+          borderRadius: 8,
+          padding: 12,
+          minHeight: 180,
+          textAlignVertical: "top",
+        }}
+      />
+      <Pressable
+        accessibilityRole="button"
+        disabled={settings.saving}
+        style={button}
+        onPress={() => {
+          void settings
+            .save({ ...settings.values, instructions }, revision)
+            .then(setSaved);
+        }}
+      >
+        <Text style={text}>
+          {settings.saving ? "Saving…" : "Save instructions"}
+        </Text>
+      </Pressable>
+      {saved ? <Text style={text}>Saved.</Text> : null}
       {settings.saveError ? (
-        <Text accessibilityRole="alert" style={styles.muted}>
-          {settings.saveError}
+        <Text accessibilityRole="alert" style={text}>
+          {settings.saveError} Close and reopen this screen to load the latest
+          settings.
         </Text>
       ) : null}
-    </SettingsSection>
+      <Text style={{ color: theme.colors.foregroundMuted }}>
+        Existing workspaces require Preview → Apply or Unlock before automatic
+        naming. Manual title changes lock the name. Preview remains available
+        when automatic naming is off. Input includes short, redacted user
+        objectives; it excludes tool output and attachments. Redaction is best
+        effort.
+      </Text>
+    </View>
   );
 }
-
 export function TitleStyleSettings({ theme }: PluginSurfaceProps) {
   const settings = useSettings(titleStyleSettings);
-  const locale = useMemo(() => detectLocale(), []);
-  const t = strings[locale];
-  const style = useMemo(() => ({ color: theme.colors.foreground }), [theme]);
-  if (settings.status === "loading") return <Text style={style}>{t.loading}</Text>;
-  if (settings.status !== "ready") {
+  if (settings.status !== "ready")
     return (
-      <SettingsSection title={t.promptSection}>
-        <Text style={style}>{settings.error}</Text>
-        <SettingsAction label={t.retry} actionLabel={t.reload} onPress={settings.reload} />
-      </SettingsSection>
+      <Text style={{ color: theme.colors.foreground }}>
+        {settings.status === "loading" ? "Loading…" : settings.error}
+      </Text>
     );
-  }
-  return <Editor settings={settings} theme={theme} locale={locale} />;
+  return <Editor settings={settings} theme={theme} />;
 }

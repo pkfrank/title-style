@@ -1,47 +1,57 @@
-# title-style
+# Tiger titles
 
-为 Paseo 会话（workspace）自动生成标题的插件：用设置页里可自定义的提示词调用模型，重命名侧边栏标题。默认生成简体中文标题，不局限于中文。
+Short, recognizable Paseo workspace names such as `Atlas · Review launch copy`.
+Forked from [zwmmm/title-style](https://github.com/zwmmm/title-style), retaining its MIT license.
 
-![Title Style Sidebar](https://raw.githubusercontent.com/zwmmm/title-style/main/assets/title-style-sidebar.png)
+## Use
 
-Paseo 内置的自动命名输出英文且没有全局语言配置。本插件在后台监听新会话的第一个 agent，用「元数据生成」配置的模型生成标题并覆盖，对整个 daemon 全局生效，包括非 git 目录。
+Open **Tiger titles** in the sidebar, the Command Center, or type `/titles` in a workspace. New workspaces are enrolled automatically while naming is enabled. Existing workspaces stay preview-only until you apply a suggestion or enable automatic naming.
+
+- **Preview** generates a suggestion without changing the name.
+- **Apply suggestion** adopts it and enables future automatic updates unless the workspace is locked.
+- **Lock / Unlock** controls automatic changes. An observed title change outside Tiger also locks it.
+- **Undo and lock** restores the previous title and prevents an immediate automatic redo.
+- **History** and search include prior names; the original name is retained separately from the last 20 changes.
+
+Settings → Tiger titles controls automatic naming and the naming instructions. The subject stays stable during automatic updates. A primary agent owns the workspace name; sibling agents and subagents cannot redirect it. Naming follows substantive user objectives, never agent completion claims or idle status.
 
 ## Install
 
-```bash
-paseo plugin add zwmmm/title-style
+Requires Paseo 0.11.1 or later and a working local Claude Code login with Haiku 4.5 access. Tested with Claude Code 2.1.285. Older CLIs lacking `--safe-mode` are unsupported. Install only once per daemon, with the `tiger-titles` ID.
+
+```sh
+npm ci
+npm run typecheck
+npm test
+paseo plugin install /absolute/path/to/title-style
 ```
 
-需要 Paseo ≥ 0.8.0，并且已开启插件（Settings → Plugins → Enable plugins，或 `~/.paseo/config.json` 中 `"pluginsEnabled": true`）。
+`paseo plugin reload tiger-titles` picks up source changes. No daemon restart is needed. `paseo plugin disable tiger-titles` stops automation while keeping state and names. Installation is per host; installing on a laptop does not install it on another daemon.
 
-## 设置
+## Model, data and limits
 
-Settings → Plugins → title-style → 打开「设置」（界面语言跟随系统语言，中文/英文），修改后自动保存：
+The server starts a tool-free Claude Code print call in a temporary directory using the existing local login. Haiku 4.5 is pinned; there is no fallback. Customizations, project instructions, skills, MCP servers, browser integration and session persistence are disabled for this call. Thinking is disabled. Requests have a 25-second timeout and bounded output; cleanup kills an in-flight call when the plugin stops.
 
-![Title Style Settings](https://raw.githubusercontent.com/zwmmm/title-style/main/assets/title-style-settings.png)
+Only the first and latest substantive user objectives (up to 800 characters each), project name, current title and naming instructions are sent. Tool output and attachments are excluded. Common token patterns, email addresses and URLs are redacted from objectives; this is best-effort redaction, not a sensitive-data classifier. Titles and project names are sent as metadata. History and input hashes are stored locally; raw objectives are not persisted by the plugin.
 
-| 设置项 | 说明 |
-| --- | --- |
-| 提示词 | 生成标题的提示词，可以指定任何语言或风格 |
-| 模型覆盖 | 留空时跟随 Settings → Host → Metadata 的模型配置；填 `provider/model` 可覆盖 |
+One call runs at a time. Automatic calls have a two-minute per-workspace cooldown, persistent input deduplication and a host-wide budget of 30 calls/hour. Explicit previews bypass the cooldown but share the hourly budget. The budget includes failed attempts. The screen reports list-price usage for successful generations; this is not a subscription invoice or a complete provider billing ledger.
 
-默认提示词：
+State lives in `$PASEO_HOME/plugin-data/tiger-titles/state.json` (default `~/.paseo`). Settings use Paseo's typed settings API. Writes are serialized and atomic; a pending rename is journaled before changing Paseo so an interrupted update can be recovered and locked.
 
-> 用简体中文生成一个简短的任务型标题（不超过 30 个字）：请求的操作 + 具体对象 + 关键标识符。直接输出标题文本，不要解释、引号或前后缀。
+Paseo 0.11.1 does not expose an atomic compare-and-set title mutation or title-change provenance. Tiger rechecks before every write and rejects stale results, but there is still a narrow read/write race. It conservatively treats any outside title change, including Paseo's built-in namer, as an edit to preserve. If the built-in namer wins, unlock or preview in Tiger. The plugin does not disable Paseo's built-in naming model or account for its usage.
 
-改坏了想恢复默认，把上面的文案粘回去即可。临时停用插件用插件列表的启停按钮。
+Automatic updates follow user objective changes, not inferred milestones from assistant prose. First/latest objectives are fetched from bounded timeline pages; if a recent objective cannot be found, generation stops with an error. Separate agent tabs are not renamed in this version: the public SDK offers workspace title changes but no agent-title setter. The changed names are the workspace/sidebar rows.
 
-## 工作方式
+## Development and checks
 
-- 监听 `agent.created`：每个 workspace 的第一个 agent 创建后异步执行一次
-- 从首条 prompt 提取素材（最多 600 字符），调用模型返回 `{"title": "…"}`
-- 通过 `setTitle` 写入 workspace 标题；Paseo 内置的英文命名结果会被覆盖，且不会反向覆盖本插件的标题
-- 生成用的临时 agent 以委托子代理（delegated subagent）身份运行，完成后自动归档，全程静默，不产生应用内或推送通知
+```sh
+npm run typecheck
+npm test
+npm run dev:ui
+```
 
-## Limitations
+The UI harness at `http://127.0.0.1:4178` renders the actual React Native components with synthetic data. It is not a replacement Paseo client. Check wide and compact layouts, light/dark themes, preview/apply/lock/undo and search. Plugin runtime code uses only host-supplied UI modules; the web harness is excluded from the plugin's TypeScript/runtime graph.
 
-- 只重命名新创建的 workspace；已有标题不会被修改
-- 用户手动改过的标题会被尊重（创建后 60 秒内的自动改名除外）
-- 生成期间会话的第一个 agent 下会短暂出现一个名为「会话标题生成」的子代理，完成后自动归档
-- 只处理会话标题；commit message 与 PR 文本的生成不受影响
-- 每次生成是一次真实模型调用，按元数据生成所配模型的用量计费
+`node dev/live-smoke.mjs` is an explicit integration check against the local daemon. It creates a disposable workspace and a Haiku agent, verifies automatic naming, undo and stale-preview rejection, then archives the workspace. It uses model quota. Unit tests do not call a model.
+
+Use `paseo plugin logs tiger-titles` for lifecycle errors and the workspace row for specific failure reasons. CLI stderr and transcripts are never written to plugin logs.
