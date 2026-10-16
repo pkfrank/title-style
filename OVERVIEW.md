@@ -6,6 +6,6 @@ Requires Paseo 0.11.1 or later and a recent Claude Code installation with a work
 
 The model receives short user objectives, the project name and the current title. Common secrets, email addresses and URLs are redacted from objectives; tool output and attachments are excluded. Redaction is best effort. Requests use a tool-free Claude Code call with project customizations and session persistence disabled. History is kept locally.
 
-Haiku 4.5 is pinned with no fallback. Automatic requests are deduplicated and limited to one at a time, a two-minute interval per workspace and 30 requests per hour across the host. Explicit previews share the hourly limit. Reported costs are list-price estimates, not subscription charges.
+Haiku 4.5 is pinned with no fallback. Automatic requests are deduplicated and limited to one at a time and a two-minute interval per workspace. There is no hourly cap. Reported costs are list-price estimates, not subscription charges.
 
 This version names workspace/sidebar rows, not individual agent tabs. Changes follow user objectives rather than inferred completion status. Paseo's built-in namer is left enabled; its changes are conservatively preserved as outside edits. Paseo does not offer an atomic conditional rename, so a narrow read/write race remains despite stale-result checks.

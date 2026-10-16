@@ -15,7 +15,6 @@ export const titleStyleSettings = defineSettings({
       .default(DEFAULT_INSTRUCTIONS),
     model: z.enum(["claude-haiku-4-5"]).default("claude-haiku-4-5"),
     cooldownSeconds: z.number().int().min(60).max(3600).default(120),
-    hourlyLimit: z.number().int().min(1).max(100).default(30),
   }),
 });
 export type TitleStyleSettings = z.output<typeof titleStyleSettings.schema>;

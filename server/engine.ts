@@ -299,14 +299,10 @@ export class Engine {
           model: settings.model,
         });
         if (job.automatic && hash === r.hash) return;
-        const calls = this.store.state.calls.filter(
-          (t) => t > Date.now() - 3600_000,
-        );
-        if (calls.length >= settings.hourlyLimit)
-          throw new Error(
-            "Hourly naming budget reached. Try again later; no fallback model was used.",
-          );
-        this.store.state.calls = [...calls, Date.now()];
+        this.store.state.calls = [
+          ...this.store.state.calls.filter((t) => t > Date.now() - 3600_000),
+          Date.now(),
+        ];
         r.lastGeneratedAt = Date.now();
         r.error = null;
         revision = r.revision;

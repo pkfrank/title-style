@@ -36,8 +36,8 @@ function Editor({
     <View style={{ gap: 16 }}>
       <Text style={text}>
         Haiku 4.5 through this host’s Claude Code login. No fallback model. One
-        call at a time, at most {settings.values.hourlyLimit}/hour, with a{" "}
-        {settings.values.cooldownSeconds}s interval per workspace.
+        call at a time, with a {settings.values.cooldownSeconds}s interval per
+        workspace.
       </Text>
       <Pressable
         accessibilityRole="switch"

@@ -186,16 +186,14 @@ test("primary agent ownership excludes subagents and siblings", async (t) => {
   await f.engine.onTurn("w", "sibling", false);
   assert.equal(f.store.state.records.w.owner, "main");
 });
-test("hourly budget survives state reload and rejects extra calls", async (t) => {
+test("call history survives state reload without capping calls", async (t) => {
   const f = await fixture(t);
-  f.settings.hourlyLimit = 1;
   await f.run();
   await f.run();
-  assert.equal(f.calls, 1);
-  assert.match((await f.row()).error!, /budget/);
+  assert.equal(f.calls, 2);
   const s = new Store(f.store.file);
   await s.load();
-  assert.equal(s.state.calls.length, 1);
+  assert.equal(s.state.calls.length, 2);
 });
 test("disabled automatic naming still allows explicit previews", async (t) => {
   const f = await fixture(t);

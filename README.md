@@ -34,7 +34,7 @@ The server starts a tool-free Claude Code print call in a temporary directory us
 
 Only the first and latest substantive user objectives (up to 800 characters each), project name, current title and naming instructions are sent. Tool output and attachments are excluded. Common token patterns, email addresses and URLs are redacted from objectives; this is best-effort redaction, not a sensitive-data classifier. Titles and project names are sent as metadata. History and input hashes are stored locally; raw objectives are not persisted by the plugin.
 
-One call runs at a time. Automatic calls have a two-minute per-workspace cooldown, persistent input deduplication and a host-wide budget of 30 calls/hour. Explicit previews bypass the cooldown but share the hourly budget. The budget includes failed attempts. The screen reports list-price usage for successful generations; this is not a subscription invoice or a complete provider billing ledger.
+One call runs at a time. Automatic calls have a two-minute per-workspace cooldown and persistent input deduplication. There is no hourly cap; Haiku calls are cheap. Explicit previews bypass the cooldown. The screen reports list-price usage for successful generations; this is not a subscription invoice or a complete provider billing ledger.
 
 State lives in `$PASEO_HOME/plugin-data/tiger-titles/state.json` (default `~/.paseo`). Settings use Paseo's typed settings API. Writes are serialized and atomic; a pending rename is journaled before changing Paseo so an interrupted update can be recovered and locked.
 
