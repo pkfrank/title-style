@@ -135,8 +135,10 @@ test("turn activity repairs generic session tabs without spending", async (t) =>
   f.store.state.records.w.expectedName = f.w.name;
   f.store.state.records.w.expectedTitle = f.w.title;
   await f.engine.onTurn("w", "resume", false);
+  assert.equal(f.agents[0].title, f.w.name);
   assert.equal(f.agents[1].title, f.w.name);
   assert.equal(f.agents[2].title, "Compare provider quotas");
+  assert.equal(f.agentWrites, 2);
   assert.equal(f.calls, 0);
 });
 test("automatic mode ignores old workspaces", async (t) => {

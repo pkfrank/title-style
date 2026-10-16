@@ -8,8 +8,11 @@ export function isGenericSessionTitle(title: string | null | undefined) {
 
 export function shouldFollowWorkspaceTitle(
   agentTitle: string | null | undefined,
-  workspaceTitle: string,
+  workspaceTitles: string | readonly string[],
 ) {
   const value = agentTitle?.trim() ?? "";
-  return isGenericSessionTitle(value) || value === workspaceTitle;
+  const titles = Array.isArray(workspaceTitles)
+    ? workspaceTitles
+    : [workspaceTitles];
+  return isGenericSessionTitle(value) || titles.includes(value);
 }

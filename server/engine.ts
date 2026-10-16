@@ -106,7 +106,7 @@ export class Engine {
         const r = this.store.state.records[w.id];
         if (!r?.managed || r.locked) continue;
         try {
-          await this.syncAgentTitles(w, w.name);
+          await this.syncAgentTitles(w, w.name, this.followedTitles(r));
         } catch {
           r.error = "One or more generic session tabs could not be updated.";
         }
@@ -124,7 +124,7 @@ export class Engine {
       const w = await this.backend.workspace(id);
       if (w)
         try {
-          await this.syncAgentTitles(w, w.name);
+          await this.syncAgentTitles(w, w.name, this.followedTitles(r));
         } catch {
           r.error = "One or more generic session tabs could not be updated.";
           await this.store.save();
@@ -294,7 +294,7 @@ export class Engine {
       this.writes.delete(w.id);
     }
     try {
-      await this.syncAgentTitles(w, display, w.name);
+      await this.syncAgentTitles(w, display, [w.name]);
     } catch {
       r.error =
         "Workspace renamed, but one or more session tabs could not be updated.";
@@ -304,17 +304,16 @@ export class Engine {
   private async syncAgentTitles(
     w: Workspace,
     title: string,
-    previousWorkspaceTitle?: string,
+    previousWorkspaceTitles: readonly string[] = [],
   ) {
     if (!title.trim()) return;
-    const previous = previousWorkspaceTitle ?? "";
     const agents = await this.backend.agents(w.id);
     let failed = false;
     for (const agent of agents) {
       if (
         agent.parent ||
         agent.title === title ||
-        !shouldFollowWorkspaceTitle(agent.title, previous)
+        !shouldFollowWorkspaceTitle(agent.title, previousWorkspaceTitles)
       )
         continue;
       try {
@@ -326,6 +325,13 @@ export class Engine {
     }
     if (failed)
       throw new Error("One or more session titles could not be updated.");
+  }
+  private followedTitles(r: RecordState) {
+    return [
+      r.original,
+      r.expectedName,
+      ...r.history.flatMap((entry) => [entry.before, entry.after]),
+    ];
   }
   private async run(job: Job) {
     let revision: number | undefined;
