@@ -30,7 +30,7 @@ paseo plugin install /absolute/path/to/title-style
 
 ## Model, data and limits
 
-The server starts a tool-free Claude Code print call in a temporary directory using the existing local login. Haiku 4.5 is pinned; there is no fallback. Customizations, project instructions, skills, MCP servers, browser integration and session persistence are disabled for this call. Thinking is disabled. Requests have a 25-second timeout and bounded output; cleanup kills an in-flight call when the plugin stops.
+The server starts a tool-free Claude Code print call in a temporary directory using the existing local login. Haiku 4.5 is requested. Claude Code may serve it with a newer Haiku, which is accepted; any non-Haiku model is rejected, and there is no fallback. Customizations, project instructions, skills, MCP servers, browser integration and session persistence are disabled for this call. Thinking is disabled. Requests have a 25-second timeout and bounded output; cleanup kills an in-flight call when the plugin stops.
 
 Only the first and latest substantive user objectives (up to 800 characters each), project name, current title and naming instructions are sent. Tool output and attachments are excluded. Common token patterns, email addresses and URLs are redacted from objectives; this is best-effort redaction, not a sensitive-data classifier. Titles and project names are sent as metadata. History and input hashes are stored locally; raw objectives are not persisted by the plugin.
 

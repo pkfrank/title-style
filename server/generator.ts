@@ -124,8 +124,12 @@ export async function generate(
     if (result.is_error || result.subtype !== "success")
       throw new Error("Haiku did not finish successfully; no title changed.");
     const models = Object.keys((result.modelUsage ?? {}) as object);
-    if (models.some((x) => x !== "claude-haiku-4-5"))
-      throw new Error("Unexpected model used; title rejected.");
+    // Claude Code may serve a pinned Haiku request with a newer Haiku; any Haiku is cheap enough.
+    const unexpected = models.filter((x) => !x.startsWith("claude-haiku-"));
+    if (unexpected.length)
+      throw new Error(
+        `Unexpected model used (${unexpected.join(", ").slice(0, 80)}); title rejected.`,
+      );
     let answer = result.structured_output;
     if (!answer && typeof result.result === "string") {
       try {
