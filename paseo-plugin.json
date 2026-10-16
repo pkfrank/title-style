@@ -1,7 +1,7 @@
 {
   "id": "tiger-titles",
   "name": "Tiger titles",
-  "description": "Stable, action-oriented Paseo workspace titles with preview, locks and undo",
+  "description": "Stable, action-oriented Paseo workspace and session titles",
   "icon": "assets/icon.png",
   "requirements": {
     "paseo": ">=0.11.1"

@@ -12,7 +12,11 @@ import {
   isAcknowledgment,
   type TextItem,
 } from "./policy";
-import type { GenerationResult } from "./generator";
+import { localTitle, type GenerationResult } from "./generator";
+import {
+  isGenericSessionTitle,
+  shouldFollowWorkspaceTitle,
+} from "./session-titles";
 async function fixture(t: any, model?: () => Promise<GenerationResult>) {
   const dir = await mkdtemp(path.join(tmpdir(), "tiger-test-"));
   const store = new Store(path.join(dir, "state.json"));
@@ -28,19 +32,27 @@ async function fixture(t: any, model?: () => Promise<GenerationResult>) {
   ];
   let calls = 0;
   let writes = 0;
+  let agentWrites = 0;
+  const agents = [
+    { id: "main", parent: false, title: w.name },
+    { id: "resume", parent: false, title: "Resume session" },
+    { id: "custom", parent: false, title: "Compare provider quotas" },
+    { id: "sub", parent: true, title: "Refactor tests" },
+  ];
   const settings = titleStyleSettings.schema.parse({});
   const backend: Backend = {
     workspace: async () => ({ ...w }),
     workspaces: async () => [{ ...w }],
-    agents: async () => [
-      { id: "main", parent: false, title: w.name },
-      { id: "sub", parent: true, title: "Refactor tests" },
-    ],
+    agents: async () => agents.map((agent) => ({ ...agent })),
     timeline: async () => timeline,
     rename: async (_, title) => {
       w.title = title;
       w.name = title ?? "Build registration form";
       writes++;
+    },
+    renameAgent: async (id, title) => {
+      agents.find((agent) => agent.id === id)!.title = title;
+      agentWrites++;
     },
   };
   const engine = new Engine(
@@ -74,6 +86,10 @@ async function fixture(t: any, model?: () => Promise<GenerationResult>) {
     get writes() {
       return writes;
     },
+    get agentWrites() {
+      return agentWrites;
+    },
+    agents,
     setTimeline: (items: TextItem[]) => {
       timeline = items;
     },
@@ -101,10 +117,27 @@ test("new workspaces name automatically and survive reload", async (t) => {
   await f.engine.created("w");
   await f.run(true);
   assert.equal(f.writes, 1);
+  assert.equal(f.agentWrites, 2);
+  assert.equal(f.agents[0].title, "Camp · Build registration form");
+  assert.equal(f.agents[1].title, "Camp · Build registration form");
+  assert.equal(f.agents[2].title, "Compare provider quotas");
+  assert.equal(f.agents[3].title, "Refactor tests");
   const restored = new Store(f.store.file);
   await restored.load();
   assert.equal(restored.state.records.w.history.length, 1);
   assert.equal(restored.state.records.w.expectedName, f.w.name);
+});
+test("turn activity repairs generic session tabs without spending", async (t) => {
+  const f = await fixture(t);
+  await f.engine.created("w");
+  f.w.name = "Camp · Build registration form";
+  f.w.title = f.w.name;
+  f.store.state.records.w.expectedName = f.w.name;
+  f.store.state.records.w.expectedTitle = f.w.title;
+  await f.engine.onTurn("w", "resume", false);
+  assert.equal(f.agents[1].title, f.w.name);
+  assert.equal(f.agents[2].title, "Compare provider quotas");
+  assert.equal(f.calls, 0);
 });
 test("automatic mode ignores old workspaces", async (t) => {
   const f = await fixture(t);
@@ -277,6 +310,44 @@ test("input omits tools and redacts common secrets", () => {
   assert(!JSON.stringify(source).includes("private"));
   assert(!JSON.stringify(source).includes("tool output"));
   assert(isAcknowledgment("Good, keep going"));
+});
+
+test("local fallback makes a bounded action title from the stable objective", () => {
+  assert.equal(
+    localTitle({
+      project: "Tiger",
+      current: "Resume session",
+      first:
+        "As a tiger thing, we need to figure out if/how Paseo can switch sessions between providers",
+      latest: "yeah update it all",
+      instructions: "",
+    }),
+    "Tiger · Figure out if/how Paseo can switch",
+  );
+  assert.equal(
+    localTitle({
+      project: "Done · odd project",
+      current: "Resume session",
+      first: "Completed",
+      latest: "Completed",
+      instructions: "",
+    }),
+    "Odd project · Review workspace objective",
+  );
+});
+
+test("generic session title policy preserves custom tabs", () => {
+  assert.equal(isGenericSessionTitle("Resume session"), true);
+  assert.equal(isGenericSessionTitle("New session"), true);
+  assert.equal(isGenericSessionTitle("Plan provider handoff"), false);
+  assert.equal(
+    shouldFollowWorkspaceTitle("Tiger · Plan handoff", "Tiger · Plan handoff"),
+    true,
+  );
+  assert.equal(
+    shouldFollowWorkspaceTitle("Compare quotas", "Tiger · Plan handoff"),
+    false,
+  );
 });
 
 test("workspace-created hook still enrolls a workspace seen by a concurrent list", async (t) => {

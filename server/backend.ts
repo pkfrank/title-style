@@ -1,7 +1,8 @@
 import type { PaseoApi, PaseoWorkspace } from "@getpaseo/client";
+import { execFile } from "node:child_process";
 import type { Backend, Workspace } from "./engine";
 import { isAcknowledgment, type TextItem } from "./policy";
-export function backend(paseo: PaseoApi): Backend {
+export function backend(paseo: PaseoApi, paseoHome: string): Backend {
   const convert = (w: PaseoWorkspace): Workspace => ({
     id: w.id,
     name: w.name,
@@ -85,6 +86,25 @@ export function backend(paseo: PaseoApi): Backend {
     },
     async rename(id, title) {
       await paseo.workspaces.ref(id).setTitle(title);
+    },
+    async renameAgent(id, title) {
+      await new Promise<void>((resolve, reject) => {
+        execFile(
+          process.env.TIGER_PASEO_PATH || "paseo",
+          [
+            "agent",
+            "update",
+            id,
+            "--name",
+            title,
+            "--json",
+            "--home",
+            paseoHome,
+          ],
+          { timeout: 10_000, maxBuffer: 128_000 },
+          (error) => (error ? reject(error) : resolve()),
+        );
+      });
     },
   };
 }

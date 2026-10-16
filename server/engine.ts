@@ -7,6 +7,7 @@ import {
 } from "./generator";
 import type { TitleStyleSettings } from "../shared/settings";
 import type { TitleRow } from "../shared/contracts";
+import { shouldFollowWorkspaceTitle } from "./session-titles";
 export type Workspace = {
   id: string;
   name: string;
@@ -20,6 +21,7 @@ export interface Backend {
   agents(id: string): Promise<Agent[]>;
   timeline(id: string): Promise<readonly TextItem[]>;
   rename(id: string, title: string | null): Promise<void>;
+  renameAgent(id: string, title: string): Promise<void>;
 }
 type Job = { id: string; automatic: boolean; due: number };
 export class Engine {
@@ -97,19 +99,42 @@ export class Engine {
       await this.store.save();
     });
   }
+  async reconcile() {
+    await this.transaction(async () => {
+      if (!(await this.settings()).enabled) return;
+      for (const w of await this.backend.workspaces()) {
+        const r = this.store.state.records[w.id];
+        if (!r?.managed || r.locked) continue;
+        try {
+          await this.syncAgentTitles(w, w.name);
+        } catch {
+          r.error = "One or more generic session tabs could not be updated.";
+        }
+      }
+      await this.store.save();
+    });
+  }
   async onTurn(id: string, agentId: string, parent: boolean) {
     if (parent || this.controller.signal.aborted) return;
     await this.transaction(async () => {
       const r = this.store.state.records[id];
       if (!r?.managed || r.locked) return;
+      const settings = await this.settings();
+      if (!settings.enabled) return;
+      const w = await this.backend.workspace(id);
+      if (w)
+        try {
+          await this.syncAgentTitles(w, w.name);
+        } catch {
+          r.error = "One or more generic session tabs could not be updated.";
+          await this.store.save();
+        }
       if (r.owner && r.owner !== agentId) return;
       // Anchor on one top-level agent. Sibling/subagent work cannot redirect the workspace.
       if (!r.owner) {
         r.owner = agentId;
         await this.store.save();
       }
-      const settings = await this.settings();
-      if (!settings.enabled) return;
       this.enqueue({
         id,
         automatic: true,
@@ -268,6 +293,39 @@ export class Engine {
     } finally {
       this.writes.delete(w.id);
     }
+    try {
+      await this.syncAgentTitles(w, display, w.name);
+    } catch {
+      r.error =
+        "Workspace renamed, but one or more session tabs could not be updated.";
+      await this.store.save();
+    }
+  }
+  private async syncAgentTitles(
+    w: Workspace,
+    title: string,
+    previousWorkspaceTitle?: string,
+  ) {
+    if (!title.trim()) return;
+    const previous = previousWorkspaceTitle ?? "";
+    const agents = await this.backend.agents(w.id);
+    let failed = false;
+    for (const agent of agents) {
+      if (
+        agent.parent ||
+        agent.title === title ||
+        !shouldFollowWorkspaceTitle(agent.title, previous)
+      )
+        continue;
+      try {
+        await this.backend.renameAgent(agent.id, title);
+        agent.title = title;
+      } catch {
+        failed = true;
+      }
+    }
+    if (failed)
+      throw new Error("One or more session titles could not be updated.");
   }
   private async run(job: Job) {
     let revision: number | undefined;

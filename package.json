@@ -1,8 +1,8 @@
 {
   "name": "tiger-titles",
   "private": true,
-  "version": "2.0.0",
-  "description": "Stable, action-oriented Paseo workspace titles with preview, locks and undo",
+  "version": "2.1.0",
+  "description": "Stable, action-oriented Paseo workspace and session titles",
   "author": "zwmmm",
   "license": "MIT",
   "scripts": {

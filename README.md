@@ -17,7 +17,7 @@ Settings → Tiger titles controls automatic naming and the naming instructions.
 
 ## Install
 
-Requires Paseo 0.11.1 or later and a working local Claude Code login with Haiku 4.5 access. Tested with Claude Code 2.1.285. Older CLIs lacking `--safe-mode` are unsupported. Install only once per daemon, with the `tiger-titles` ID.
+Requires Paseo 0.11.1 or later and a recent local Claude Code installation for model-generated names. Tested with Claude Code 2.1.285. Older CLIs lacking `--safe-mode` are unsupported. Install only once per daemon, with the `tiger-titles` ID.
 
 ```sh
 npm ci
@@ -30,7 +30,7 @@ paseo plugin install /absolute/path/to/title-style
 
 ## Model, data and limits
 
-The server starts a tool-free Claude Code print call in a temporary directory using the existing local login. Haiku 4.5 is requested. Claude Code may serve it with a newer Haiku, which is accepted; any non-Haiku model is rejected, and there is no fallback. Customizations, project instructions, skills, MCP servers, browser integration and session persistence are disabled for this call. Thinking is disabled. Requests have a 25-second timeout and bounded output; cleanup kills an in-flight call when the plugin stops.
+The server starts a tool-free Claude Code print call in a temporary directory using the existing local login. Haiku 4.5 is requested. Claude Code may serve it with a newer Haiku, which is accepted; any non-Haiku model is rejected. If Claude is unavailable, over quota or returns an unsuitable title, a deterministic local fallback derives a bounded name from the same redacted objective. No alternate provider is launched. Customizations, project instructions, skills, MCP servers, browser integration and session persistence are disabled for the model call. Thinking is disabled. Requests have a 25-second timeout and bounded output; cleanup kills an in-flight call when the plugin stops.
 
 Only the first and latest substantive user objectives (up to 800 characters each), project name, current title and naming instructions are sent. Tool output and attachments are excluded. Common token patterns, email addresses and URLs are redacted from objectives; this is best-effort redaction, not a sensitive-data classifier. Titles and project names are sent as metadata. History and input hashes are stored locally; raw objectives are not persisted by the plugin.
 
@@ -40,7 +40,7 @@ State lives in `$PASEO_HOME/plugin-data/tiger-titles/state.json` (default `~/.pa
 
 Paseo 0.11.1 does not expose an atomic compare-and-set title mutation or title-change provenance. Tiger rechecks before every write and rejects stale results, but there is still a narrow read/write race. It conservatively treats any outside title change, including Paseo's built-in namer, as an edit to preserve. If the built-in namer wins, unlock or preview in Tiger. The plugin does not disable Paseo's built-in naming model or account for its usage.
 
-Automatic updates follow user objective changes, not inferred milestones from assistant prose. First/latest objectives are fetched from bounded timeline pages; if a recent objective cannot be found, generation stops with an error. Separate agent tabs are not renamed in this version: the public SDK offers workspace title changes but no agent-title setter. The changed names are the workspace/sidebar rows.
+Automatic updates follow user objective changes, not inferred milestones from assistant prose. First/latest objectives are fetched from bounded timeline pages; if a recent objective cannot be found, generation stops with an error. Top-level agent tabs follow the workspace title when they still have a generic name such as `Resume session` or their prior name matched the workspace. Custom agent names and subagent names are preserved. Paseo's public plugin SDK does not yet expose an agent-title setter, so the trusted daemon plugin uses Paseo's own local `agent update --name` CLI command for that mutation.
 
 ## Development and checks
 
